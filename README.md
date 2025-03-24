@@ -4,9 +4,6 @@ Tools that ease the use of BTRFS
 ## Usage
 
 ```
-BTRFS Snaptime, (c) 2025 oxasploits, llc.
-Designed by: oxagast / Marshall Whittaker.
-
 Usage:
    ./btrfs-snaptime.sh -p /:/home -c -w
    ./btrfs-snaptime.sh -p /home -r -d 5

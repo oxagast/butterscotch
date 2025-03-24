@@ -1,4 +1,4 @@
-# btrfs-backups
+# BTRFS Backup Utils
 Tools that ease the use of BTRFS
 
 ## Usage

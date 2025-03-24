@@ -1,0 +1,1 @@
+0 11,18 * * *    /usr/local/bin/btrfs-snaptime -p /:/home -d 8 -r -c -w

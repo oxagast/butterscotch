@@ -1,7 +1,10 @@
 # BTRFS Backup Utils
+
 Tools that ease the use of BTRFS
 
 ## Usage
+
+The below flags tell btrfs how to generate and manage your snapshots.
 
 ```
 Usage:
@@ -24,6 +27,10 @@ It is also recommended to add this to a crontab so it runs automatically, an exa
 
 This would tell btrfs-snaptime to run at 11am and 6pm every day.  It would overwrite the first
 snapshot if rerun, on but this is to assure getting a backup every day.
+
+## License
+
+Apache License 2.0
 
 ## Author
 

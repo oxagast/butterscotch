@@ -1,13 +1,13 @@
 .Dd 28/3/25               \" DATE
-.Dt btrfs-snaptime      \" Program name and manual section number
+.Dt butterscotch      \" Program name and manual section number
 .Os Linux
 .Sh NAME                 \" Section Header - required - don't modify
-.Nm btrfs-snaptime
+.Nm ButterScotch
 .\" Use .Nm macro to designate other names for the documented program.
 .Nd A backup utility that utilizes btrfs snapshots
 .Sh SYNOPSIS             \" Section Header - required - don't modify
 .Nn btrfs-snaptime
-.Op Fl hdrcwL              \" [-abcd]
+.Op Fl hadrcwL              \" [-abcd]
 .Op Fl p /:/home         \" [-a path]
 .Sh DESCRIPTION          \" Section Header - required - don't modify
 .Nm
@@ -41,12 +41,13 @@ Snapshot locations (relative to btrfs mountpoint). Default:  /.snapshots/
 .Pp
 .Sh FILES \" File used or created by the topic of the man page
 .Bl -tag -width -indent
-.It Pa /usr/local/bin/btrfs-snaptime
+.It Pa /usr/local/bin/butterscotch
 btrfs-snaptime The script. Should be set executable.
 .Sh SEE ALSO
 .\" List links in ascending order by section, alphabetically within a section.
 .\" Please do not reference files that do not exist without filing a bug report
 .Xr btrfs 1 ,
-.Xr crontab 1 .
+.Xr crontab 1 ,
+.Xr bash 1 .
 .\" .Sh BUGS              \" Document known, unremedied bugs
 .\" .Sh HISTORY           \" Document history if command behaves in a unique manner

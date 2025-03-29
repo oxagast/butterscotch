@@ -5,15 +5,15 @@ MANDIR=/usr/share/man
 
 
 # Install target
-install: btrfs-snaptime.sh
+install: butterscotch.sh
 	mkdir -p $(BINDIR)
-	cp btrfs-snaptime.sh $(BINDIR)/btrfs-snaptime
-	chown root:root $(BINDIR)/btrfs-snaptime
-	chmod a+rx,u+rwx $(BINDIR)/btrfs-snaptime
-	gzip -k man1/btrfs-snaptime.1
-	mv man1/btrfs-snaptime.1.gz $(MANDIR)/man1/btrfs-snaptime.1.gz
+	cp butterscotch.sh $(BINDIR)/butterscotch
+	chown root.root $(BINDIR)/butterscotch
+	chmod a+rx,u+rwx $(BINDIR)/butterscotch
+	gzip -k man1/butterscotch.1
+	mv man1/butterscotch.1.gz $(MANDIR)/man1/butterscotch.1.gz
 
 
 # Remove the installed target
 deinstall:
-	rm -f $(BINDIR)/btrfs-snaptime $(MANDIR)/man1/btrfs-snaptime.1.gz
+	rm -f $(BINDIR)/butterscotch $(MANDIR)/man1/butterscotch.1.gz

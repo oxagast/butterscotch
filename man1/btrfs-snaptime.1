@@ -22,8 +22,10 @@ A list of flags and their descriptions:
 .Bl -tag -width -indent  \" Differs from above in tag removed
 .It Fl h
 The standard help message.
+.It Fl a
+Backup will be run on all btrfs compatible partitions.  Not compatible with the -p option!
 .It Fl p
-Partitions to snapshot, seperated by colons. Mandatory.
+Partitions to snapshot, seperated by colons. Mandatory.  Not compatible with the -a option!
 .It Fl d
 Max number of snapshots to leave in trail, total. Default: 6
 .It Fl r

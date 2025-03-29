@@ -6,7 +6,7 @@ LEAVEN=6 # the number of snapshots trailing the one you created that aren't dele
 REDO=0
 CR=0
 RO=0
-VER="v0.29.1"
+VER="v0.30"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store backups in
 #
 function help {

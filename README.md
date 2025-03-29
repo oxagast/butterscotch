@@ -1,6 +1,6 @@
-# BTRFS Backup Utils
+# ButterScotch btrfs backup utilities
 
-Tools that ease the use of BTRFS
+Tools that ease the use of BTRFS backups
 
 ## Usage
 
@@ -8,8 +8,8 @@ The below flags tell btrfs how to generate and manage your snapshots.
 
 ```
 Usage:
-   ./btrfs-snaptime.sh -p /:/home -c -w
-   ./btrfs-snaptime.sh -p /home -r -d 5
+   ./butterscotch -p /:/home -c -w
+   ./butterscotch -a -r -d 5
 
  -h    This help message.
  -a    Backs up all btrfs compatible partitions.                   Default:           off
@@ -26,7 +26,7 @@ It is also recommended to add this to a crontab so it runs automatically, an exa
 
 `0 11,18 * * *    /usr/local/bin/btrfs-snaptime -p /:/home -d 8 -r -c -w`
 
-This would tell btrfs-snaptime to run at 11am and 6pm every day.  It would overwrite the first
+This would tell butterscotch to run at 11am and 6pm every day.  It would overwrite the first
 snapshot if rerun, on but this is to assure getting a backup every day.
 
 ## License

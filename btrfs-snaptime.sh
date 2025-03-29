@@ -35,7 +35,7 @@ if [[ $# -eq 0 ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hap:d:rwcl:" OPTS; do
+while getopts ":hap:d:rwcL:" OPTS; do
   case ${OPTS} in
     h) # display Help
       help

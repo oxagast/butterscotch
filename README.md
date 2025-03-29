@@ -12,6 +12,7 @@ Usage:
    ./btrfs-snaptime.sh -p /home -r -d 5
 
  -h    This help message.
+ -a    Backs up all btrfs compatible partitions.                   Default:           off
  -p    Partitions to snapshot, seperated by colons. Mandatory.     Default:          none
  -d    Max number of snapshots to leave in trail, total.           Default:             6
  -r    If there is a previous snapshot taken on the same           Default:           off

@@ -15,9 +15,10 @@ function help {
       echo
       echo "Usage:"
       echo "   $0 -p /:/home -c -w"
-      echo "   $0 -p /home -r -d 5"
+      echo "   $0 -a -r -d 5"
       echo
       echo " -h       This help message."
+      echo " -a       Snapshot all btrfs partitions.                                 Default:           off"
       echo " -p       Partitions to snapshot, seperated by colons. Mandatory.        Default:          none"
       echo " -d       Max number of snapshots to leave in trail, total.              Default:             6"
       echo " -r       If there is a previous snapshot taken on the same              Default:           off"
@@ -34,7 +35,7 @@ if [[ $# -eq 0 ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hp:d:rwcl:" OPTS; do
+while getopts ":hap:d:rwcl:" OPTS; do
   case ${OPTS} in
     h) # display Help
       help
@@ -42,12 +43,14 @@ while getopts ":hp:d:rwcl:" OPTS; do
       ;;
     n) # how many to leave total
       LEAVEN=${OPTARG} ;;
+    a) # all partitions
+      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':') ; ASET=1 ;;
     L) # location
       SSDIR=${OPTARG} ;;
     r) # if we need to remove todays snapshot first (using this too much is hard on your disk!)
       REDO=1 ;;
     p) # the partitions string
-      PTNSTR=${OPTARG} ;;
+      PTNSTR=${OPTARG} ; PSET=1 ;;
     c) # commit removes
       CR=1 ;;
     w) # read-only fs
@@ -63,7 +66,11 @@ echo "Butter Snaptime, (c) 2024 oxasploits, llc."
 echo "Designed by oxagast."
 echo
 
-
+if [ ${ASET} == 1 ] && [ ${PSET} == 1 ]; then
+  echo "The -a and -p option are incompatible!";
+  echo "Use -h for help."
+  exit 1
+fi
 if [[ $(id -u) != 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."

@@ -10,8 +10,6 @@ VER="v1.0.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store backups in
 #
 function help {
-      echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
-      echo "Designed by: oxagast / Marshall Whittaker."
       echo
       echo "Usage:"
       echo "   $0 -p /:/home -c -w"
@@ -29,8 +27,10 @@ function help {
       echo
 }
 if [[ $# -eq 0 ]]; then
+  echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
+  echo "Designed by oxagast / Marshall Whittaker."
   help
-  echo "You the -p argument is required."
+  echo "The -p argument is required."
   exit 1
 fi
 # generates date
@@ -56,38 +56,46 @@ while getopts ":hap:d:rwcL:" OPTS; do
     w) # read-only fs
       RO=1 ;;
     \?) # invalid opt
-      help
+      echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
+      echo "Designed by oxagast / Marshall Whittaker."
       echo "Error: Invalid option"
+      echo "Use -h for help."
+      help
       exit 1
       ;;
   esac
 done
-echo "ButterScotch, (c) 2025 oxasploits, llc."
-echo "Designed by oxagast."
+echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
+echo "Designed by oxagast / Marshall Whittaker."
 echo
 if [[ $(mount | grep btrfs | wc -l) == 0 ]]; then
   echo "No btrfs partitions seem to be mounted on this system! Please mount at least one.";
   echo "Use -h for help.";
+  help
   exit 1
 fi
 if [[ ${PTNSTR} != *"/"* ]]; then
   echo "You need to specify a btrfs mount point (directory) for this to work!";
   echo "Use -h for help.";
+  help
   exit 1
 fi
 if [[ ${ASET} == 1 ]] && [[ ${PSET} == 1 ]]; then
   echo "The -a and -p option are incompatible!";
   echo "Use -h for help."
+  help
   exit 1
 fi
 if [[ $(id -u) != 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."
+  help
   exit 1
 fi
 if [[ ${PTNSTR} == "" ]]; then
   echo "You need to specify at least one partition to snapshot.  Multiple snapshots are split by a colon (:)."
   echo "Use -h for help."
+  help
   exit 1
 fi
 IFS=':'
@@ -95,12 +103,14 @@ read -a PTN <<< "${PTNSTR}"
 if [[ ${LEAVEN} < 1 ]]; then
   echo "You should leave at least one (1) backup snapshot!"
   echo "Use -h for help."
+  help
   exit 1
 fi
 for BTRD in "${PTN[@]}"; do
   if [ ! -d "${BTRD}" ]; then
     echo "There is not a BTRFS partition mounted at: ${BTRD}.";
     echo "Use -h for help."
+    help
     exit 1
   fi
 done
@@ -141,6 +151,8 @@ for BTRFSP in "${PTN[@]}"; do
   else
     help
     echo "Already snapped today. Hint: Try -r to override."
+    echo "Use -h for help."
+    help
     exit 1
   fi
   # loop back around for next

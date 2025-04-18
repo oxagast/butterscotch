@@ -6,7 +6,7 @@ LEAVEN=6 # the number of snapshots trailing the one you created that aren't dele
 REDO=0
 CR=0
 RO=0
-VER="v1.0"
+VER="v1.0.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store backups in
 #
 function help {
@@ -62,11 +62,20 @@ while getopts ":hap:d:rwcL:" OPTS; do
       ;;
   esac
 done
-echo "Butter Snaptime, (c) 2024 oxasploits, llc."
+echo "ButterScotch, (c) 2025 oxasploits, llc."
 echo "Designed by oxagast."
 echo
-
-if [ ${ASET} == 1 ] && [ ${PSET} == 1 ]; then
+if [[ $(mount | grep btrfs | wc -l) == 0 ]]; then
+  echo "No btrfs partitions seem to be mounted on this system! Please mount at least one.";
+  echo "Use -h for help.";
+  exit 1
+fi
+if [[ ${PTNSTR} != *"/"* ]]; then
+  echo "You need to specify a btrfs mount point (directory) for this to work!";
+  echo "Use -h for help.";
+  exit 1
+fi
+if [[ ${ASET} == 1 ]] && [[ ${PSET} == 1 ]]; then
   echo "The -a and -p option are incompatible!";
   echo "Use -h for help."
   exit 1
@@ -88,6 +97,13 @@ if [[ ${LEAVEN} < 1 ]]; then
   echo "Use -h for help."
   exit 1
 fi
+for BTRD in "${PTN[@]}"; do
+  if [ ! -d "${BTRD}" ]; then
+    echo "There is not a BTRFS partition mounted at: ${BTRD}.";
+    echo "Use -h for help."
+    exit 1
+  fi
+done
 IFS=' '
 for BTRFSP in "${PTN[@]}"; do
   if [ ! -d "${BTRFSP}${SSDIR}" ]; then

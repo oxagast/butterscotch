@@ -24,7 +24,7 @@ Usage:
 
 It is also recommended to add this to a crontab so it runs automatically, an example would be:
 
-`0 11,18 * * *    /usr/local/bin/btrfs-snaptime -p /:/home -d 8 -r -c -w`
+`0 11,18 * * *    /usr/local/bin/butterscotch -p /:/home -d 8 -r -c -w`
 
 This would tell butterscotch to run at 11am and 6pm every day.  It would overwrite the first
 snapshot if rerun, on but this is to assure getting a backup every day.

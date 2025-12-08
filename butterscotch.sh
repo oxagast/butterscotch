@@ -9,8 +9,7 @@ RO=0
 VER="v1.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store backups in
 #
-function help
-{
+function help {
   echo
   echo "Usage:"
   echo "   $0 -p /:/home -c -w"
@@ -35,47 +34,57 @@ if [[ $# -eq 0 ]]; then
   echo "The -p argument is required."
   exit 1
 fi
+# Check if btrfs is installed
+if [[ $(which btrfs) == "" ]]; then
+  echo "This program requires the 'btrfs' command to be installed and in your PATH!"
+  echo "Please install the btrfs-progs package for your distribution."
+  echo "Use -h for help."
+  help
+  exit 1
+fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
 while getopts ":hap:d:rwcqL:" OPTS; do
   case ${OPTS} in
-    h) # display Help
-      help
-      exit 1
-      ;;
-    n) # how many to leave total
-      LEAVEN=${OPTARG} ;;
-    a) # all partitions
-      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
-      ASET=1
-      ;;
-    L) # location
-      SSDIR=${OPTARG} ;;
-    r) # if we need to remove todays snapshot first (using this too much is hard on your disk!)
-      REDO=1 ;;
-    p) # the partitions string
-      PTNSTR=${OPTARG}
-      PSET=1
-      ;;
-    c) # commit removes
-      CR=1 ;;
-    w) # read-only fs
-      RO=1 ;;
-    q) # quicsnap
-echo "Quick snapshot selected. Snapshots will be saved as snap-quick."
-      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
-      QUICK=1
-      ASET=1
-      REDO=1
-      ;;
-    \?) # invalid opt
-      echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
-      echo "Designed by oxagast / Marshall Whittaker."
-      echo "Error: Invalid option"
-      echo "Use -h for help."
-      help
-      exit 1
-      ;;
+  h) # display Help
+    help
+    exit 1
+    ;;
+  n) # how many to leave total
+    LEAVEN=${OPTARG} ;;
+  a) # all partitions
+    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+    ASET=1
+    ;;
+  L) # location
+    SSDIR=${OPTARG} ;;
+  r) # if we need to remove todays snapshot first (using this too much is hard on your disk!)
+    REDO=1 ;;
+  p) # the partitions string
+    PTNSTR=${OPTARG}
+    PSET=1
+    ;;
+  c) # commit removes
+    CR=1
+    ;;
+  w) # read-only fs
+    RO=1
+    ;;
+  q) # quicsnap
+    echo "Quick snapshot selected. Snapshots will be saved as snap-quick."
+    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+    QUICK=1
+    ASET=1
+    REDO=1
+    ;;
+  \?) # invalid opt
+    echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
+    echo "Designed by oxagast / Marshall Whittaker."
+    echo "Error: Invalid option"
+    echo "Use -h for help."
+    help
+    exit 1
+    ;;
   esac
 done
 echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
@@ -111,6 +120,8 @@ if [[ ${PTNSTR} == "" ]]; then
   help
   exit 1
 fi
+# so our seperator can be : instead of newline
+# temporarily
 IFS=':'
 read -a PTN <<<"${PTNSTR}"
 if [[ ${LEAVEN} < 1 ]]; then
@@ -172,7 +183,6 @@ for BTRFSP in "${PTN[@]}"; do
     echo "Use -h for help."
     help
     exit 1
-  fi
-  # loop back around for next
+  fi # loop back around for next
 done
 # now we're done

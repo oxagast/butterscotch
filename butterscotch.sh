@@ -50,15 +50,10 @@ function takesnap {
       echo "Error: Snapshot failed on partition: ${BTRFSP}!"
     fi
     # fix permissions on it
-    chmod a+rx,g+rx,u=rwx,o-w "${BTRFSP}${SSDIR}${D}"
-    if [[ $? == 0 ]]; then
-      echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
-    else
-      echo "Warning: Failed to fix permissions on snapshot at earliest level!"
-    fi
+    fixperms
     if [ $RO == 1 ]; then
-      btrfs property set "${BTRFSP}${SSDIR}${D}" ro true
-      echo "Snapshot set as read-only."
+      # set the snapshot read-only
+      setro
     fi
   else
     help
@@ -69,12 +64,30 @@ function takesnap {
   fi
 }
 
+function setro {
+  btrfs property set "${BTRFSP}${SSDIR}${D}" ro true
+  if [[ $? == 0 ]]; then
+    echo "Snapshot set as read-only."
+  else
+    echo "Warning: Failed to set snapshot as read-only!"
+  fi
+}
+
+function fixperms {
+  chmod a+rx,g+rx,u=rwx,o-w "${BTRFSP}${SSDIR}${D}"
+  if [[ $? == 0 ]]; then
+    echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
+  else
+    echo "Warning: Failed to fix permissions on snapshot at earliest level!"
+  fi
+}
+
 function redoremove {
   if [[ ${REDO} == 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     if [ -d "${BTRFSP}${SSDIR}${D}" ]; then
       if [[ ${CR} == 0 ]]; then
-        btrfs subvolume delete "${BTRFSP}${SSDIR}${D}" && echo "Removed todays snapshot..." # remove todays snapshot
+        btrfs subvolume delete "${BTRFSP}${SSDIR}${D}" # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -82,7 +95,7 @@ function redoremove {
           exit 1
         fi
       else
-        btrfs subvolume delete -c "${BTRFSP}${SSDIR}${D}" && echo "Removed todays snapshot..." # remove todays snapshot
+        btrfs subvolume delete -c "${BTRFSP}${SSDIR}${D}" # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -101,8 +114,6 @@ function banner {
   echo "Designed by oxagast / Marshall Whittaker."
   echo
 }
-
-banner
 
 if [[ $# -eq 0 ]]; then
   help
@@ -162,7 +173,7 @@ while getopts ":hap:d:rwcqL:" OPTS; do
     ;;
   esac
 done
-
+banner
 if [[ $(id -u) != 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."

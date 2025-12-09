@@ -1,6 +1,6 @@
 
 Name:           butterscotch
-Version:        1.1
+Version:        1.1.2
 Release:        1%{?dist}
 Summary:        This software helps you create snapshots on a system with BTRFS filesystems.
 

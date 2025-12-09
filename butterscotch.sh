@@ -1,16 +1,14 @@
 #!/bin/bash
 # oxagast
 #
-# these are the user definable vars defaults
-LEAVEN=6 # the number of snapshots trailing the one you created that aren't deleted
+LEAVEN=6 # the number of snapshots trailing
 REDO=0
 CR=0
 RO=0
-VER="v1.1"
-SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store backups in
-#
+VER="v1.1.2"
+SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
+
 function help {
-  echo
   echo "Usage:"
   echo "   $0 -p /:/home -c -w"
   echo "   $0 -a -r -d 5"
@@ -22,9 +20,9 @@ function help {
   echo " -r       If there is a previous snapshot taken on the same              Default:           off"
   echo "          day, should we remove it and resnap?"
   echo " -c       Immediately commit deletions.                                  Default:           off"
-  echo " -w       Mark read-only                                                 Default:           off"
-  echo " -L       Snapshot locations (relative to btrfs mountpoint)              Default:  /.snapshots/"
-  echo " -q       Take a quicksnap.                                              Default:           off"
+  echo " -w       Mark read-only.                                                 Default:           off"
+  echo " -L       Snapshot relative locations.  Must begin and end with '/'      Default:  /.snapshots/"
+  echo " -q       Take a quicksnap. This assumes -a if not specified.            Default:           off"
   echo
 }
 
@@ -45,9 +43,19 @@ function oldremove {
 function takesnap {
   if [ ! -d "${BTRFSP}${SSDIR}${D}" ]; then
     # generate snapshot
-    btrfs subvolume snapshot ${BTRFSP} "${BTRFSP}${SSDIR}${D}" && echo "Subvolume snapshot taken: ${BTRFSP}."
+    btrfs subvolume snapshot ${BTRFSP} "${BTRFSP}${SSDIR}${D}"
+    if [[ $? == 0 ]]; then
+      echo "Subvolume snapshot taken: ${BTRFSP}."
+    else
+      echo "Error: Snapshot failed on partition: ${BTRFSP}!"
+    fi
     # fix permissions on it
-    chmod a+rx,g+rx,u=rwx,o-w "${BTRFSP}${SSDIR}${D}" && echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
+    chmod a+rx,g+rx,u=rwx,o-w "${BTRFSP}${SSDIR}${D}"
+    if [[ $? == 0 ]]; then
+      echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
+    else
+      echo "Warning: Failed to fix permissions on snapshot at earliest level!"
+    fi
     if [ $RO == 1 ]; then
       btrfs property set "${BTRFSP}${SSDIR}${D}" ro true
       echo "Snapshot set as read-only."
@@ -61,14 +69,26 @@ function takesnap {
   fi
 }
 
-function redosnap {
+function redoremove {
   if [[ ${REDO} == 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     if [ -d "${BTRFSP}${SSDIR}${D}" ]; then
       if [[ ${CR} == 0 ]]; then
         btrfs subvolume delete "${BTRFSP}${SSDIR}${D}" && echo "Removed todays snapshot..." # remove todays snapshot
+        if [[ $? == 0 ]]; then
+          echo "Successfully removed todays snapshot."
+        else
+          echo "Failed to remove todays snapshot. Cannot continue."
+          exit 1
+        fi
       else
         btrfs subvolume delete -c "${BTRFSP}${SSDIR}${D}" && echo "Removed todays snapshot..." # remove todays snapshot
+        if [[ $? == 0 ]]; then
+          echo "Successfully removed todays snapshot."
+        else
+          echo "Failed to remove todays snapshot. Cannot continue."
+          exit 1
+        fi
       fi
     else
       echo "There was no snapshot from today to remove..."
@@ -76,11 +96,17 @@ function redosnap {
   fi
 }
 
-if [[ $# -eq 0 ]]; then
+function banner {
   echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
   echo "Designed by oxagast / Marshall Whittaker."
+  echo
+}
+
+banner
+
+if [[ $# -eq 0 ]]; then
   help
-  echo "The -p argument is required."
+  echo "An argument is required."
   exit 1
 fi
 # Check if btrfs is installed
@@ -136,9 +162,7 @@ while getopts ":hap:d:rwcqL:" OPTS; do
     ;;
   esac
 done
-echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
-echo "Designed by oxagast / Marshall Whittaker."
-echo
+
 if [[ $(id -u) != 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."
@@ -151,7 +175,6 @@ if [[ $(mount | grep btrfs | wc -l) == 0 ]]; then
   help
   exit 1
 fi
-
 # check if ${SSDIR} both begins and ends with a '/' char
 if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   echo "The -L parameter must begin and end with a / character!"
@@ -159,7 +182,6 @@ if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   help
   exit 1
 fi
-
 if [[ ${PTNSTR} != *"/"* ]]; then
   echo "You need to specify a btrfs mount point (directory) for this to work!"
   echo "Use -h for help."
@@ -198,16 +220,17 @@ for BTRD in "${PTN[@]}"; do
 done
 IFS=' '
 for BTRFSP in "${PTN[@]}"; do
+  # make the dir if it doesn't exist
   createdir
   # removes any snapshots older than x days while leaving at least y snapshots
   oldremove
   # check if redo is set and remove today's snap if it is
   if [[ ${QUICK} == 1 ]]; then
-    #REDO=1
     D="snap-quick"
   fi
-  redosnap
+  redoremove
   # unless the snapshot already exists
   takesnap # loop back around for next partition
 done
+echo "Finished taking snapshots!"
 # now we're done

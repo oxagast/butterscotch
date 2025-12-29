@@ -27,27 +27,58 @@ function help {
 }
 
 function createdir {
-  if [ ! -d "${BTRFSP}${SSDIR}" ]; then
-    mkdir -p "${BTRFSP}${SSDIR}" && echo "Directory created..." || echo "Directory creation failed"
+  if [ ! -d "${BASEP}${SSDIR}" ]; then
+    mkdir -p "${BASEP}${SSDIR}" && echo "Directory created..." || echo "Directory creation failed"
   fi
 }
 
-function oldremove {
-  if [[ ${CR} == 0 ]]; then
-    find "/${BTRFSP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete "/${BTRFSP}${SSDIR}"{}
+function oldremovezfs {
+  if [[ $(uname -s) == "FreeBSD" ]]; then
+    SSDIR="/.zfs/snapshot/"
+    POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
+    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
   else
-    find "/${BTRFSP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete -c "/${BTRFSP}${SSDIR}"{}
+    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
   fi
 }
 
-function takesnap {
-  if [ ! -d "${BTRFSP}${SSDIR}${D}" ]; then
+function oldremovebtr {
+  if [[ ${CR} == 0 ]]; then
+    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete "/${BASEP}${SSDIR}"{}
+  else
+    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete -c "/${BASEP}${SSDIR}"{}
+  fi
+}
+
+function takesnapzfs {
+  if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
     # generate snapshot
-    btrfs subvolume snapshot ${BTRFSP} "${BTRFSP}${SSDIR}${D}"
+    zfs snapshot "${POOL}@${D}"
     if [[ $? == 0 ]]; then
-      echo "Subvolume snapshot taken: ${BTRFSP}."
+      echo "Subvolume snapshot taken: ${BASEP}."
     else
-      echo "Error: Snapshot failed on partition: ${BTRFSP}!"
+      echo "Error: Snapshot failed on partition: ${BASEP}!"
+    fi
+    if [ $RO == 1 ]; then
+      echo "Setting RO not supported on zfs!"
+    fi
+  else
+    help
+    echo "Already snapped today. Hint: Try -r to override."
+    echo "Use -h for help."
+    help
+    exit 1
+  fi
+}
+
+function takesnapbtr {
+  if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
+    # generate snapshot
+    btrfs subvolume snapshot ${BASEP} "${BASEP}${SSDIR}${D}"
+    if [[ $? == 0 ]]; then
+      echo "Subvolume snapshot taken: ${BASEP}."
+    else
+      echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
     # fix permissions on it
     fixperms
@@ -65,7 +96,7 @@ function takesnap {
 }
 
 function setro {
-  btrfs property set "${BTRFSP}${SSDIR}${D}" ro true
+  btrfs property set "${BASEP}${SSDIR}${D}" ro true
   if [[ $? == 0 ]]; then
     echo "Snapshot set as read-only."
   else
@@ -74,7 +105,7 @@ function setro {
 }
 
 function fixperms {
-  chmod a+rx,g+rx,u=rwx,o-w "${BTRFSP}${SSDIR}${D}"
+  chmod a+rx,g+rx,u=rwx,o-w "${BASEP}${SSDIR}${D}"
   if [[ $? == 0 ]]; then
     echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
   else
@@ -82,12 +113,31 @@ function fixperms {
   fi
 }
 
-function redoremove {
+function redoremovezfs {
+  if [[ ${REDO} == 1 ]]; then
+    SSDIR="/.zfs/snapshot/"
+    echo "Checking if there is a snapshot from today that needs removing before we can continue..."
+    POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
+    if [ -d "/${BASEP}${SSDIR}${D}" ]; then
+      zfs destroy "${POOL}@${D}" # remove todays snapshot
+      if [[ $? == 0 ]]; then
+        echo "Successfully removed todays snapshot."
+      else
+        echo "Failed to remove todays snapshot. Cannot continue."
+        exit 1
+      fi
+    else
+      echo "There was no snapshot from today to remove..."
+    fi
+  fi
+}
+
+function redoremovebtr {
   if [[ ${REDO} == 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
-    if [ -d "${BTRFSP}${SSDIR}${D}" ]; then
+    if [ -d "${BASEP}${SSDIR}${D}" ]; then
       if [[ ${CR} == 0 ]]; then
-        btrfs subvolume delete "${BTRFSP}${SSDIR}${D}" # remove todays snapshot
+        btrfs subvolume delete "${BASEP}${SSDIR}${D}" # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -95,7 +145,7 @@ function redoremove {
           exit 1
         fi
       else
-        btrfs subvolume delete -c "${BTRFSP}${SSDIR}${D}" # remove todays snapshot
+        btrfs subvolume delete -c "${BASEP}${SSDIR}${D}" # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -121,7 +171,7 @@ if [[ $# -eq 0 ]]; then
   exit 1
 fi
 # Check if btrfs is installed
-if [[ $(which btrfs) == "" ]]; then
+if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
   echo "This program requires the 'btrfs' command to be installed and in your PATH!"
   echo "Please install the btrfs-progs package for your distribution."
   echo "Use -h for help."
@@ -230,18 +280,26 @@ for BTRD in "${PTN[@]}"; do
   fi
 done
 IFS=' '
-for BTRFSP in "${PTN[@]}"; do
+for BASEP in "${PTN[@]}"; do
   # make the dir if it doesn't exist
+
   createdir
-  # removes any snapshots older than x days while leaving at least y snapshots
-  oldremove
-  # check if redo is set and remove today's snap if it is
   if [[ ${QUICK} == 1 ]]; then
     D="snap-quick"
   fi
-  redoremove
+
+  # removes any snapshots older than x days while leaving at least y snapshots
+  if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
+    oldremovezfs
+    redoremovezfs
+    takesnapzfs
+  fi
+  if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
+    oldremovebtr
+    redoremovebtr
+    takesnapbtr # loop back around for next partition
+  fi
   # unless the snapshot already exists
-  takesnap # loop back around for next partition
 done
 echo "Finished taking snapshots!"
 # now we're done

@@ -35,11 +35,10 @@ function createdir {
 
 function oldremovezfs {
   if [[ $(uname -s) == "FreeBSD" ]]; then
-    SSDIR="/.zfs/snapshot/"
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
-    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
   elif [[ $(uname -s) == "Linux" ]]; then
-    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
   else
     echo "Unsupported OS for ZFS snapshot removal!"
   fi
@@ -47,15 +46,14 @@ function oldremovezfs {
 
 function oldremovebtr {
   if [[ ${CR} == 0 ]]; then
-    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete "/${BASEP}${SSDIR}"{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{}
   else
-    find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} -d '\n' btrfs subvolume delete -c "/${BASEP}${SSDIR}"{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{}
   fi
 }
 
 function takesnapzfs {
-  SSDIR="/.zfs/snapshot/"
-  if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
+  if [ ! -d "${BASEP}${SSDIRZFS}${D}" ]; then
     # generate snapshot
     zfs snapshot "${POOL}@${D}"
     if [[ $? == 0 ]]; then
@@ -79,7 +77,7 @@ function takesnapbtr {
   if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
     # generate snapshot
     btrfs subvolume snapshot ${BASEP} "${BASEP}${SSDIR}${D}"
-    if [[ $? == 0 ]]; then
+    if [[ $? -eq 0 ]]; then
       echo "Subvolume snapshot taken: ${BASEP}."
     else
       echo "Error: Snapshot failed on partition: ${BASEP}!"
@@ -119,10 +117,9 @@ function fixperms {
 
 function redoremovezfs {
   if [[ ${REDO} == 1 ]]; then
-    SSDIR="/.zfs/snapshot/"
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
-    if [ -d "/${BASEP}${SSDIR}${D}" ]; then
+    if [ -d "/${BASEP}${SSDIRZFS}${D}" ]; then
       zfs destroy "${POOL}@${D}" # remove todays snapshot
       if [[ $? == 0 ]]; then
         echo "Successfully removed todays snapshot."
@@ -295,7 +292,6 @@ for BTRD in "${PTN[@]}"; do
 done
 IFS=' '
 for BASEP in "${PTN[@]}"; do
-  # make the dir if it doesn't exist
 
   if [[ ${QUICK} == 1 ]]; then
     D="snap-quick"
@@ -303,6 +299,7 @@ for BASEP in "${PTN[@]}"; do
 
   # removes any snapshots older than x days while leaving at least y snapshots
   if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
+    SSDIRZFS="/.zfs/snapshot/"
     oldremovezfs
     redoremovezfs
     takesnapzfs

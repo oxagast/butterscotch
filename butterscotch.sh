@@ -190,8 +190,13 @@ while getopts ":hap:d:rUwcqL:" OPTS; do
   n) # how many to leave total
     LEAVEN=${OPTARG} ;;
   a) # all partitions
-    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
-    ASET=1
+    if [[ $(uname -s) == "Linux" ]]; then
+      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+      ASET=1
+    else
+      echo "The -a switch only works in Linux!"
+      exit 1
+    fi
     ;;
   L) # location
     SSDIR=${OPTARG} ;;
@@ -234,12 +239,12 @@ if [[ $(id -u) -ne 0 ]]; then
   help
   exit 1
 fi
-if [[ $(mount | grep btrfs | wc -l) -eq 0 ]]; then
-  echo "No btrfs partitions seem to be mounted on this system! Please mount at least one."
-  echo "Use -h for help."
-  help
-  exit 1
-fi
+#if [[ $(mount | grep btrfs | wc -l) -eq 0 ]]; then
+#  echo "No btrfs partitions seem to be mounted on this system! Please mount at least one."
+#  echo "Use -h for help."
+#  help
+#  exit 1
+#fi
 # check if ${SSDIR} both begins and ends with a '/' char
 if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   echo "The -L parameter must begin and end with a / character!"
@@ -248,7 +253,7 @@ if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   exit 1
 fi
 if [[ ${PTNSTR} != *"/"* ]]; then
-  echo "You need to specify a btrfs mount point (directory) for this to work!"
+  echo "You need to specify a mount point (directory) for this to work!"
   echo "Use -h for help."
   help
   exit 1

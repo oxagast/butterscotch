@@ -1,10 +1,13 @@
-# ButterScotch btrfs backup utilities
+# ButterScotch
+## Filesystem snapshot backed backup utilities
 
-Tools that ease the use of BTRFS backups
+Tools that ease the use of fs snapshots
+
+ButterScotch supports both ZFS and BTRFS currently.
 
 ## Usage
 
-The below flags tell btrfs how to generate and manage your snapshots.
+The below flags tell butterscotch how to generate and manage your snapshots.
 
 ```
 Usage:

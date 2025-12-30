@@ -5,7 +5,7 @@ LEAVEN=6 # the number of snapshots trailing
 REDO=0
 CR=0
 RO=0
-VER="v1.1.2"
+VER="v1.2.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 
 function help {

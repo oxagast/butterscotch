@@ -20,9 +20,10 @@ function help {
   echo " -r       If there is a previous snapshot taken on the same              Default:           off"
   echo "          day, should we remove it and resnap?"
   echo " -c       Immediately commit deletions.                                  Default:           off"
-  echo " -w       Mark read-only.                                                 Default:           off"
+  echo " -w       Mark read-only.                                                Default:           off"
   echo " -L       Snapshot relative locations.  Must begin and end with '/'      Default:  /.snapshots/"
   echo " -q       Take a quicksnap. This assumes -a if not specified.            Default:           off"
+  echo " -U       Unsupported OS override. Use at your own risk!                 Default:           off"
   echo
 }
 
@@ -37,8 +38,10 @@ function oldremovezfs {
     SSDIR="/.zfs/snapshot/"
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
-  else
+  elif [[ $(uname -s) == "Linux" ]]; then
     find "/${BASEP}${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIR}"{}
+  else
+    echo "Unsupported OS for ZFS snapshot removal!"
   fi
 }
 
@@ -51,6 +54,7 @@ function oldremovebtr {
 }
 
 function takesnapzfs {
+  SSDIR="/.zfs/snapshot/"
   if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
     # generate snapshot
     zfs snapshot "${POOL}@${D}"
@@ -180,7 +184,7 @@ if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hap:d:rwcqL:" OPTS; do
+while getopts ":hap:d:rUwcqL:" OPTS; do
   case ${OPTS} in
   h) # display Help
     help
@@ -199,6 +203,9 @@ while getopts ":hap:d:rwcqL:" OPTS; do
   p) # the partitions string
     PTNSTR=${OPTARG}
     PSET=1
+    ;;
+  U) # unsupported OS override
+    UNSUPPPORTED=1
     ;;
   c) # commit removes
     CR=1
@@ -224,13 +231,13 @@ while getopts ":hap:d:rwcqL:" OPTS; do
   esac
 done
 banner
-if [[ $(id -u) != 0 ]]; then
+if [[ $(id -u) -ne 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."
   help
   exit 1
 fi
-if [[ $(mount | grep btrfs | wc -l) == 0 ]]; then
+if [[ $(mount | grep btrfs | wc -l) -eq 0 ]]; then
   echo "No btrfs partitions seem to be mounted on this system! Please mount at least one."
   echo "Use -h for help."
   help
@@ -249,11 +256,18 @@ if [[ ${PTNSTR} != *"/"* ]]; then
   help
   exit 1
 fi
-if [[ ${ASET} == 1 ]] && [[ ${PSET} == 1 ]]; then
+if [[ ${ASET} -eq 1 ]] && [[ ${PSET} -eq 1 ]]; then
   echo "The -a and -p option are incompatible!"
   echo "Use -h for help."
   help
   exit 1
+fi
+if [[ ${UNSUPPORTED} -ne 1 ]]; then
+  if [[ $(uname -s) != "FreeBSD" ]] && [[ $(uname -s) != "Linux" ]]; then
+    echo "This operating system has not been tested with ButterScotch!"
+    echo "Haulting here to avoid any potential issues... -U to override!"
+    exit 1
+  fi
 fi
 if [[ ${PTNSTR} == "" ]]; then
   echo "You need to specify at least one partition to snapshot.  Multiple snapshots are split by a colon (:)."
@@ -283,7 +297,6 @@ IFS=' '
 for BASEP in "${PTN[@]}"; do
   # make the dir if it doesn't exist
 
-  createdir
   if [[ ${QUICK} == 1 ]]; then
     D="snap-quick"
   fi
@@ -295,6 +308,7 @@ for BASEP in "${PTN[@]}"; do
     takesnapzfs
   fi
   if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
+    createdir
     oldremovebtr
     redoremovebtr
     takesnapbtr # loop back around for next partition

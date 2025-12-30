@@ -8,7 +8,9 @@ License:        Apache v2
 URL:            https://github.com/oxagast/butterscotch
 Source0:        butterscotch.tar.gz
 
-Requires:       bash btrfs-progs
+Requires:       bash
+Enhances:       btrfs-progs
+
 
 %description
 This software helps users create rolling BTRFS snapshots on their systems.

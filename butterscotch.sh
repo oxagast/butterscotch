@@ -5,9 +5,10 @@ LEAVEN=6 # the number of snapshots trailing
 REDO=0
 CR=0
 RO=0
-VER="v1.2.1"
+VER="v1.2.2"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
-
+SSDIRZFS="/.zfs/snapshot/"
+SSDIRBTR="/.snapshots/"
 function help {
   echo "Usage:"
   echo "   $0 -p /:/home -c -w"
@@ -27,13 +28,13 @@ function help {
   echo
 }
 
-function createdir {
+function CreateDir {
   if [ ! -d "${BASEP}${SSDIR}" ]; then
     mkdir -p "${BASEP}${SSDIR}" && echo "Directory created..." || echo "Directory creation failed"
   fi
 }
 
-function oldremovezfs {
+function OldRemoveZFS {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
@@ -44,7 +45,7 @@ function oldremovezfs {
   fi
 }
 
-function oldremovebtr {
+function OldRemoveBTRFS {
   if [[ ${CR} == 0 ]]; then
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{}
   else
@@ -52,7 +53,7 @@ function oldremovebtr {
   fi
 }
 
-function takesnapzfs {
+function TakeSnapZFS {
   if [ ! -d "${BASEP}${SSDIRZFS}${D}" ]; then
     # generate snapshot
     zfs snapshot "${POOL}@${D}"
@@ -73,7 +74,7 @@ function takesnapzfs {
   fi
 }
 
-function takesnapbtr {
+function TakeSnapBTRFS {
   if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
     # generate snapshot
     btrfs subvolume snapshot ${BASEP} "${BASEP}${SSDIR}${D}"
@@ -83,10 +84,10 @@ function takesnapbtr {
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
     # fix permissions on it
-    fixperms
+    FixPerms
     if [ $RO == 1 ]; then
       # set the snapshot read-only
-      setro
+      SetRO
     fi
   else
     help
@@ -97,7 +98,7 @@ function takesnapbtr {
   fi
 }
 
-function setro {
+function SetRO {
   btrfs property set "${BASEP}${SSDIR}${D}" ro true
   if [[ $? == 0 ]]; then
     echo "Snapshot set as read-only."
@@ -106,7 +107,7 @@ function setro {
   fi
 }
 
-function fixperms {
+function FixPerms {
   chmod a+rx,g+rx,u=rwx,o-w "${BASEP}${SSDIR}${D}"
   if [[ $? == 0 ]]; then
     echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
@@ -115,7 +116,7 @@ function fixperms {
   fi
 }
 
-function redoremovezfs {
+function RedoRemoveZFS {
   if [[ ${REDO} == 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
@@ -133,7 +134,7 @@ function redoremovezfs {
   fi
 }
 
-function redoremovebtr {
+function RedoRemoveBTRFS {
   if [[ ${REDO} == 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     if [ -d "${BASEP}${SSDIR}${D}" ]; then
@@ -199,7 +200,9 @@ while getopts ":hap:d:rUwcqL:" OPTS; do
     fi
     ;;
   L) # location
-    SSDIR=${OPTARG} ;;
+    SSDIR=${OPTARG}
+    SSDIRBTR=${OPTARG}
+    ;;
   r) # if we need to remove todays snapshot first (using this too much is hard on your disk!)
     REDO=1 ;;
   p) # the partitions string
@@ -304,16 +307,17 @@ for BASEP in "${PTN[@]}"; do
 
   # removes any snapshots older than x days while leaving at least y snapshots
   if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
-    SSDIRZFS="/.zfs/snapshot/"
-    oldremovezfs
-    redoremovezfs
-    takesnapzfs
+    SSDIR=${SSDIRZFS}
+    OldRemoveZFS
+    RedoRemoveZFS
+    TakeSnapZFS
   fi
   if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
-    createdir
-    oldremovebtr
-    redoremovebtr
-    takesnapbtr # loop back around for next partition
+    SSDIR=${SSDIRBTR}
+    CreateDir
+    OldRemoveBTRFS
+    RedoRemoveBTRFS
+    TakeSnapBTRFS # loop back around for next partition
   fi
   # unless the snapshot already exists
 done

@@ -36,9 +36,9 @@ function createdir {
 function oldremovezfs {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
   elif [[ $(uname -s) == "Linux" ]]; then
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
   else
     echo "Unsupported OS for ZFS snapshot removal!"
   fi
@@ -46,9 +46,9 @@ function oldremovezfs {
 
 function oldremovebtr {
   if [[ ${CR} == 0 ]]; then
-    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{}
   else
-    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{}
   fi
 }
 
@@ -173,8 +173,8 @@ if [[ $# -eq 0 ]]; then
 fi
 # Check if btrfs is installed
 if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
-  echo "This program requires the 'btrfs' command to be installed and in your PATH!"
-  echo "Please install the btrfs-progs package for your distribution."
+  echo "This program requires the 'btrfs' or 'zfs' command(s) to be installed and"
+  echo "in your PATH!"
   echo "Use -h for help."
   help
   exit 1

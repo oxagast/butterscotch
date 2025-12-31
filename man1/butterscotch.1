@@ -11,7 +11,7 @@
 .Op Fl p /:/home         \" [-a path]
 .Sh DESCRIPTION          \" Section Header - required - don't modify
 .Nm
-is a btrfs (filesystem) helper utility utility designed to be used either 
+is a filesystem (zfs or btrfs) helper utility utility designed to be used either 
 as a standlone or as a timed cronjob that generates filesystem snapshots.
 It is designed to make the snapshots read-only to prevent accidental
 deletion or modification.  The utility can also leave a 
@@ -43,12 +43,13 @@ Snapshot locations (relative to btrfs mountpoint). Default:  /.snapshots/
 .Pp
 .Sh FILES \" File used or created by the topic of the man page
 .Bl -tag -width -indent
-.It Pa /usr/local/bin/butterscotch
+.It Pa /usr/bin/butterscotch
 btrfs-snaptime The script. Should be set executable.
 .Sh SEE ALSO
 .\" List links in ascending order by section, alphabetically within a section.
 .\" Please do not reference files that do not exist without filing a bug report
 .Xr btrfs 1 ,
+.Xr zfs 1 ,
 .Xr crontab 1 ,
 .Xr bash 1 .
 .\" .Sh BUGS              \" Document known, unremedied bugs

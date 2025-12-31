@@ -1,6 +1,6 @@
 
 Name:           butterscotch
-Version:        1.1.2
+Version:        1.2.1
 Release:        1%{?dist}
 Summary:        This software helps you create snapshots on a system with BTRFS filesystems.
 
@@ -10,7 +10,6 @@ Source0:        butterscotch.tar.gz
 
 Requires:       bash
 Enhances:       btrfs-progs
-
 
 %description
 This software helps users create rolling BTRFS snapshots on their systems.
@@ -23,14 +22,15 @@ This software helps users create rolling BTRFS snapshots on their systems.
 %install
 rm -rf %{buildroot}
 mkdir -p %{buildroot}%{_bindir} %{buildroot}%{_mandir}/man1/
+echo "#!/bin/sh" > /etc/cron.daily/butterscotch
+echo "butterscotch -a -d 3 -c -w" >> /etc/cron.daily/butterscotch
 install -D -m 644 butterscotch.sh %{buildroot}%{_bindir}/butterscotch
 install -D -m 755 butterscotch.sh %{_bindir}/butterscotch
 install -D -m 755 butterscotch.1 %{buildroot}%{_mandir}/man1/butterscotch.1
 install -D -m 644 butterscotch.1 %{_mandir}/man1/butterscotch.1
 gzip -f %{_mandir}/man1/butterscotch.1
 chmod 755 %{buildroot}/usr/bin/butterscotch /usr/bin/butterscotch
-#chmod 644 %{_mandir}/man1/butterscotch.1.gz /usr/share/man/man1/butterscotch.1.gz
-
+chmod 755 /etc/cron.daily/butterscotch
 
 %files
 %license LICENSE
@@ -41,5 +41,7 @@ chmod 755 %{buildroot}/usr/bin/butterscotch /usr/bin/butterscotch
 rm -rf %{buildroot}
 
 %changelog
+* Tue Dec 30 2025 Marshall Whittaker <marshall@oxasploits.com>
+- Release to incorporate zfs compatiabiltiy.
 * Mon Dec 08 2025 Marshall Whittaker <marshall@oxasploits.com>
 - Initial RPM release (1.1)

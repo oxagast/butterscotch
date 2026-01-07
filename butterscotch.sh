@@ -34,6 +34,9 @@ function help {
 }
 
 function ListSnaps {
+  if [[ $(uname -s) == "FreeBSD" ]]; then
+    SSDIR=$SSDIRZFS
+  fi
   IFS=':'
   read -a PTN <<<"${PTNSTR}"
   for BASEP in "${PTN[@]}"; do
@@ -210,16 +213,11 @@ while getopts ":hVlap:d:rUwcqL:" OPTS; do
   n) # how many to leave total
     LEAVEN=${OPTARG} ;;
   a) # all partitions
-    if [[ $(uname -s) == "Linux" ]]; then
-      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
-      ASET=1
-    else
-      echo "The -a switch only works in Linux!"
-      exit 1
-    fi
+    PTNSTR=$(mount | grep "btrfs\|zfs" | grep -v crash | grep -v audit | grep -v tmp | grep -v mail | cut -d ' ' -f 3 | tr '\n' ':')
+    ASET=1
     ;;
   l) # list snapshots
-    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+    PTNSTR=$(mount | grep "btrfs\|zfs" | grep -v crash | grep -v audit | grep -v tmp | grep -v mail | cut -d ' ' -f 3 | tr '\n' ':')
     LIST=1
     ;;
   L) # location

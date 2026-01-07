@@ -1,0 +1,56 @@
+.Dd 28/3/25               \" DATE
+.Dt butterscotch      \" Program name and manual section number
+.Os Linux
+.Sh NAME                 \" Section Header - required - don't modify
+.Nm ButterScotch
+.\" Use .Nm macro to designate other names for the documented program.
+.Nd A backup utility that utilizes btrfs snapshots
+.Sh SYNOPSIS             \" Section Header - required - don't modify
+.Nn btrfs-snaptime
+.Op Fl hadrcwL              \" [-abcd]
+.Op Fl p /:/home         \" [-a path]
+.Sh DESCRIPTION          \" Section Header - required - don't modify
+.Nm
+is a filesystem (zfs or btrfs) helper utility utility designed to be used either 
+as a standlone or as a timed cronjob that generates filesystem snapshots.
+It is designed to make the snapshots read-only to prevent accidental
+deletion or modification.  The utility can also leave a 
+.Ar trail
+of snapshots, a couple days, weeks, or months behind the current snapshot,
+and you can specify how many snapshots to leave in trail.
+A list of flags and their descriptions:
+.Bl -tag -width -indent  \" Differs from above in tag removed
+.It Fl h
+The standard help message.
+.It Fl a
+Backup will be run on all btrfs compatible partitions.  Not compatible with the -p option!
+.It Fl p
+Partitions to snapshot, seperated by colons. Mandatory.  Not compatible with the -a option!
+.It Fl d
+Max number of snapshots to leave in trail, total. Default: 6
+.It Fl r
+If there is a previous snapshot taken on the same day, should we remove it and resnap?
+Default: off.
+.It Fl c
+Immediately commit deletions. Default: off.
+.It Fl q
+Make a quicksnap.
+.It Fl w
+Mark read-only. Default: off.
+.It Fl L
+Snapshot locations (relative to btrfs mountpoint). Default:  /.snapshots/
+.El                      \" Ends the list
+.Pp
+.Sh FILES \" File used or created by the topic of the man page
+.Bl -tag -width -indent
+.It Pa /usr/bin/butterscotch
+btrfs-snaptime The script. Should be set executable.
+.Sh SEE ALSO
+.\" List links in ascending order by section, alphabetically within a section.
+.\" Please do not reference files that do not exist without filing a bug report
+.Xr btrfs 1 ,
+.Xr zfs 1 ,
+.Xr crontab 1 ,
+.Xr bash 1 .
+.\" .Sh BUGS              \" Document known, unremedied bugs
+.\" .Sh HISTORY           \" Document history if command behaves in a unique manner

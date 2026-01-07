@@ -1,15 +1,17 @@
 #!/bin/bash
-# oxagast
+# oxagast / Marshall Whittaker
+# oxasploits, llc. 2026
 #
 LEAVEN=6 # the number of snapshots trailing
 REDO=0
 CR=0
 RO=0
 TAKEN=0
-VER="v1.3"
+VER="v1.3.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 SSDIRZFS="/.zfs/snapshot/"
 SSDIRBTR="/.snapshots/"
+
 function help {
   echo "Usage:"
   echo "   $0 -p /:/home -c -w"
@@ -26,8 +28,28 @@ function help {
   echo " -L       Snapshot relative locations.  Must begin and end with '/'      Default:  /.snapshots/"
   echo " -q       Take a quicksnap. This assumes -a if not specified.            Default:           off"
   echo " -U       Unsupported OS override. Use at your own risk!                 Default:           off"
+  echo " -l       List snapshots found in specified partitions. Pair with -p.    Default:          none"
   echo " -V       Display version information.                                   Default:          none"
   echo
+}
+
+function ListSnaps {
+  IFS=':'
+  read -a PTN <<<"${PTNSTR}"
+  for BASEP in "${PTN[@]}"; do
+    P="${BASEP}${SSDIR}"
+    P=$(echo "${P}" | tr -s '/')
+    readarray -O "${#SHOTS[@]}" -t SHOTS < <(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick)
+    MCOUNT=$(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick | wc -l)
+    TCOUNT=$((MCOUNT + TCOUNT))
+  done
+  if [[ $TCOUNT -eq 0 ]]; then
+    echo "No snapshots found."
+    exit 1
+  fi
+  echo "Found ${TCOUNT} snapshots."
+  printf '%s\n' "${SHOTS[@]}"
+  exit 0
 }
 
 function CreateDir {
@@ -39,9 +61,9 @@ function CreateDir {
 function OldRemoveZFS {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{} 2>&1 >/dev/null
   elif [[ $(uname -s) == "Linux" ]]; then
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{}
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{} 2>&1 >/dev/null
   else
     echo "Unsupported OS for ZFS snapshot removal!"
   fi
@@ -49,18 +71,18 @@ function OldRemoveZFS {
 
 function OldRemoveBTRFS {
   if [[ ${CR} == 0 ]]; then
-    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
   else
-    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{}
+    find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
   fi
 }
 
 function TakeSnapZFS {
   if [ ! -d "${BASEP}${SSDIRZFS}${D}" ]; then
     # generate snapshot
-    zfs snapshot "${POOL}@${D}"
+    zfs snapshot "${POOL}@${D}" 2>&1 >/dev/null
     if [[ $? == 0 ]]; then
-      echo "Subvolume snapshot taken: ${BASEP}."
+      echo "Subvolume snapshot taken: ${BASEP}"
     else
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
@@ -77,9 +99,9 @@ function TakeSnapZFS {
 function TakeSnapBTRFS {
   if [ ! -d "${BASEP}${SSDIR}${D}" ]; then
     # generate snapshot
-    btrfs subvolume snapshot ${BASEP} "${BASEP}${SSDIR}${D}"
+    btrfs subvolume snapshot ${BASEP} "${BASEP}${SSDIR}${D}" 2>&1 >/dev/null
     if [[ $? -eq 0 ]]; then
-      echo "Subvolume snapshot taken: ${BASEP}."
+      echo "Subvolume snapshot taken: ${BASEP}"
     else
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
@@ -97,7 +119,7 @@ function TakeSnapBTRFS {
 }
 
 function SetRO {
-  btrfs property set "${BASEP}${SSDIR}${D}" ro true
+  btrfs property set "${BASEP}${SSDIR}${D}" ro true 2>&1 >/dev/null
   if [[ $? == 0 ]]; then
     echo "Snapshot set as read-only."
   else
@@ -119,7 +141,7 @@ function RedoRemoveZFS {
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     if [ -d "/${BASEP}${SSDIRZFS}${D}" ]; then
-      zfs destroy "${POOL}@${D}" # remove todays snapshot
+      zfs destroy "${POOL}@${D}" 2>&1 >/dev/null # remove todays snapshot
       if [[ $? == 0 ]]; then
         echo "Successfully removed todays snapshot."
       else
@@ -137,7 +159,7 @@ function RedoRemoveBTRFS {
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     if [ -d "${BASEP}${SSDIR}${D}" ]; then
       if [[ ${CR} == 0 ]]; then
-        btrfs subvolume delete "${BASEP}${SSDIR}${D}" # remove todays snapshot
+        btrfs subvolume delete "${BASEP}${SSDIR}${D}" 2>&1 >/dev/null # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -145,7 +167,7 @@ function RedoRemoveBTRFS {
           exit 1
         fi
       else
-        btrfs subvolume delete -c "${BASEP}${SSDIR}${D}" # remove todays snapshot
+        btrfs subvolume delete -c "${BASEP}${SSDIR}${D}" 2>&1 >/dev/null # remove todays snapshot
         if [[ $? == 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
@@ -179,7 +201,7 @@ if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hVap:d:rUwcqL:" OPTS; do
+while getopts ":hVlap:d:rUwcqL:" OPTS; do
   case ${OPTS} in
   h) # display Help
     help
@@ -195,6 +217,10 @@ while getopts ":hVap:d:rUwcqL:" OPTS; do
       echo "The -a switch only works in Linux!"
       exit 1
     fi
+    ;;
+  l) # list snapshots
+    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+    LIST=1
     ;;
   L) # location
     SSDIR=${OPTARG}
@@ -273,6 +299,10 @@ if [[ ${PTNSTR} == "" ]]; then
   echo "Use -h for help."
   exit 1
 fi
+if [[ $LIST == 1 ]]; then
+  ListSnaps
+  exit 0
+fi
 # so our seperator can be : instead of newline
 # temporarily
 IFS=':'
@@ -282,13 +312,6 @@ if [[ ${LEAVEN} < 1 ]]; then
   echo "Use -h for help."
   exit 1
 fi
-for BTRD in "${PTN[@]}"; do
-  if [ ! -d "${BTRD}" ]; then
-    echo "There is not a BTRFS partition mounted at: ${BTRD}."
-    echo "Use -h for help."
-    exit 1
-  fi
-done
 IFS=' '
 for BASEP in "${PTN[@]}"; do
   if [[ ${QUICK} == 1 ]]; then
@@ -316,5 +339,6 @@ if [[ $TAKEN -ge 1 ]]; then
   echo "Finished taking ${TAKEN} snapshots!"
 else
   echo "Error: Could not find any filesystems to snapshot..."
+  exit 1
 fi
 # now we're done

@@ -295,25 +295,25 @@ for BASEP in "${PTN[@]}"; do
     D="snap-quick"
   fi
   # removes any snapshots older than x days while leaving at least y snapshots
-  if [[ $(df -T | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
+  if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
     SSDIR=${SSDIRZFS}
     OldRemoveZFS
     RedoRemoveZFS
     TakeSnapZFS
-    TAKEN=1
+    ((TAKEN++))
   fi
-  if [[ $(df -T | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
+  if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
     SSDIR=${SSDIRBTR}
     CreateDir
     OldRemoveBTRFS
     RedoRemoveBTRFS
     TakeSnapBTRFS # loop back around for next partition
-    TAKEN=1
+    ((TAKEN++))
   fi
   # unless the snapshot already exists
 done
-if [[ $TAKEN -eq 1 ]]; then
-  echo "Finished taking snapshots!"
+if [[ $TAKEN -ge 1 ]]; then
+  echo "Finished taking ${TAKEN} snapshots!"
 else
   echo "Error: Could not find any filesystems to snapshot..."
 fi

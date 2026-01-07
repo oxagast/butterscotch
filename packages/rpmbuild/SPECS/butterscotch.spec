@@ -1,6 +1,6 @@
 
 Name:           butterscotch
-Version:        1.2.1
+Version:        1.3
 Release:        1%{?dist}
 Summary:        This software helps you create snapshots on a system with BTRFS filesystems.
 
@@ -10,6 +10,7 @@ Source0:        butterscotch.tar.gz
 
 Requires:       bash
 Enhances:       btrfs-progs
+BuildArch:      noarch
 
 %description
 This software helps users create rolling BTRFS snapshots on their systems.
@@ -41,6 +42,8 @@ chmod 755 /etc/cron.daily/butterscotch
 rm -rf %{buildroot}
 
 %changelog
+* Tues Jan 06 2026 Marshall Whittaker <marshall@oxasploits.com>
+- Added check to make sure we actually snapped. Fixed bug.
 * Tue Dec 30 2025 Marshall Whittaker <marshall@oxasploits.com>
 - Release to incorporate zfs compatiabiltiy.
 * Mon Dec 08 2025 Marshall Whittaker <marshall@oxasploits.com>

@@ -5,7 +5,8 @@ LEAVEN=6 # the number of snapshots trailing
 REDO=0
 CR=0
 RO=0
-VER="v1.2.2"
+TAKEN=0
+VER="v1.3"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 SSDIRZFS="/.zfs/snapshot/"
 SSDIRBTR="/.snapshots/"
@@ -25,6 +26,7 @@ function help {
   echo " -L       Snapshot relative locations.  Must begin and end with '/'      Default:  /.snapshots/"
   echo " -q       Take a quicksnap. This assumes -a if not specified.            Default:           off"
   echo " -U       Unsupported OS override. Use at your own risk!                 Default:           off"
+  echo " -V       Display version information.                                   Default:          none"
   echo
 }
 
@@ -66,10 +68,8 @@ function TakeSnapZFS {
       echo "Setting RO not supported on zfs!"
     fi
   else
-    help
     echo "Already snapped today. Hint: Try -r to override."
     echo "Use -h for help."
-    help
     exit 1
   fi
 }
@@ -90,10 +90,8 @@ function TakeSnapBTRFS {
       SetRO
     fi
   else
-    help
     echo "Already snapped today. Hint: Try -r to override."
     echo "Use -h for help."
-    help
     exit 1
   fi
 }
@@ -177,12 +175,11 @@ if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
   echo "This program requires the 'btrfs' or 'zfs' command(s) to be installed and"
   echo "in your PATH!"
   echo "Use -h for help."
-  help
   exit 1
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hap:d:rUwcqL:" OPTS; do
+while getopts ":hVap:d:rUwcqL:" OPTS; do
   case ${OPTS} in
   h) # display Help
     help
@@ -212,6 +209,10 @@ while getopts ":hap:d:rUwcqL:" OPTS; do
   U) # unsupported OS override
     UNSUPPPORTED=1
     ;;
+  V) # version string
+    echo "Version: ${VER}"
+    exit 0
+    ;;
   c) # commit removes
     CR=1
     ;;
@@ -219,11 +220,16 @@ while getopts ":hap:d:rUwcqL:" OPTS; do
     RO=1
     ;;
   q) # quicsnap
-    echo "Quick snapshot selected. Snapshots will be saved as snap-quick."
-    PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
-    QUICK=1
-    ASET=1
-    REDO=1
+    if [[ $(uname -s) == "Linux" ]]; then
+      echo "Quick snapshot selected. Snapshots will be saved as snap-quick."
+      PTNSTR=$(mount | grep btrfs | cut -d ' ' -f 3 | tr '\n' ':')
+      QUICK=1
+      ASET=1
+      REDO=1
+    else
+      echo "Quicksnap only works in Linux!"
+      exit 1
+    fi
     ;;
   \?) # invalid opt
     echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
@@ -235,49 +241,36 @@ while getopts ":hap:d:rUwcqL:" OPTS; do
     ;;
   esac
 done
-banner
 if [[ $(id -u) -ne 0 ]]; then
   echo "This program needs to be run as root!"
   echo "Use -h for help."
-  help
   exit 1
 fi
-#if [[ $(mount | grep btrfs | wc -l) -eq 0 ]]; then
-#  echo "No btrfs partitions seem to be mounted on this system! Please mount at least one."
-#  echo "Use -h for help."
-#  help
-#  exit 1
-#fi
 # check if ${SSDIR} both begins and ends with a '/' char
 if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   echo "The -L parameter must begin and end with a / character!"
-
-  help
   exit 1
 fi
 if [[ ${PTNSTR} != *"/"* ]]; then
   echo "You need to specify a mount point (directory) for this to work!"
   echo "Use -h for help."
-  help
   exit 1
 fi
 if [[ ${ASET} -eq 1 ]] && [[ ${PSET} -eq 1 ]]; then
   echo "The -a and -p option are incompatible!"
   echo "Use -h for help."
-  help
   exit 1
 fi
 if [[ ${UNSUPPORTED} -ne 1 ]]; then
   if [[ $(uname -s) != "FreeBSD" ]] && [[ $(uname -s) != "Linux" ]]; then
     echo "This operating system has not been tested with ButterScotch!"
-    echo "Haulting here to avoid any potential issues... -U to override!"
+    echo "Haulting here to avoid any potential issues... use -U to override!"
     exit 1
   fi
 fi
 if [[ ${PTNSTR} == "" ]]; then
   echo "You need to specify at least one partition to snapshot.  Multiple snapshots are split by a colon (:)."
   echo "Use -h for help."
-  help
   exit 1
 fi
 # so our seperator can be : instead of newline
@@ -287,39 +280,41 @@ read -a PTN <<<"${PTNSTR}"
 if [[ ${LEAVEN} < 1 ]]; then
   echo "You should leave at least one (1) backup snapshot!"
   echo "Use -h for help."
-  help
   exit 1
 fi
 for BTRD in "${PTN[@]}"; do
   if [ ! -d "${BTRD}" ]; then
     echo "There is not a BTRFS partition mounted at: ${BTRD}."
     echo "Use -h for help."
-    help
     exit 1
   fi
 done
 IFS=' '
 for BASEP in "${PTN[@]}"; do
-
   if [[ ${QUICK} == 1 ]]; then
     D="snap-quick"
   fi
-
   # removes any snapshots older than x days while leaving at least y snapshots
-  if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
+  if [[ $(df -T | awk '{print $2}' | grep -v Type) == "zfs" ]]; then
     SSDIR=${SSDIRZFS}
     OldRemoveZFS
     RedoRemoveZFS
     TakeSnapZFS
+    TAKEN=1
   fi
-  if [[ $(df -T /srv | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
+  if [[ $(df -T | awk '{print $2}' | grep -v Type) == "btrfs" ]]; then
     SSDIR=${SSDIRBTR}
     CreateDir
     OldRemoveBTRFS
     RedoRemoveBTRFS
     TakeSnapBTRFS # loop back around for next partition
+    TAKEN=1
   fi
   # unless the snapshot already exists
 done
-echo "Finished taking snapshots!"
+if [[ $TAKEN -eq 1 ]]; then
+  echo "Finished taking snapshots!"
+else
+  echo "Error: Could not find any filesystems to snapshot..."
+fi
 # now we're done

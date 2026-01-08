@@ -75,7 +75,7 @@ function RemoveZFS {
 }
 
 function RemoveBTRFS {
-  if [[ ${CR} == 0 ]]; then
+  if [[ ${CR} -eq 0 ]]; then
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
   else
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
@@ -86,12 +86,12 @@ function TakeSnapZFS {
   if [ ! -d "${BASEP}${SSDIRZFS}${D}" ]; then
     # generate snapshot
     zfs snapshot "${POOL}@${D}" 2>&1 >/dev/null
-    if [[ $? == 0 ]]; then
+    if [[ $? -eq 0 ]]; then
       echo "Subvolume snapshot taken: ${BASEP}"
     else
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
-    if [ $RO == 1 ]; then
+    if [ $RO -eq 1 ]; then
       echo "Setting RO not supported on zfs!"
     fi
   else
@@ -110,9 +110,7 @@ function TakeSnapBTRFS {
     else
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
-    # fix permissions on it
-    #FixPerms
-    if [ $RO == 1 ]; then
+    if [ $RO -eq 1 ]; then
       # set the snapshot read-only
       SetRO
     fi
@@ -125,29 +123,20 @@ function TakeSnapBTRFS {
 
 function SetRO {
   btrfs property set "${BASEP}${SSDIR}${D}" ro true 2>&1 >/dev/null
-  if [[ $? == 0 ]]; then
+  if [[ $? -eq 0 ]]; then
     echo "Snapshot set as read-only."
   else
     echo "Warning: Failed to set snapshot as read-only!"
   fi
 }
 
-function FixPerms {
-  chmod a+rx,g+rx,u=rwx,o-w "${BASEP}${SSDIR}${D}"
-  if [[ $? == 0 ]]; then
-    echo "Permission earliest level fixed (a+rx,g+rx,u=rwx,o-w)."
-  else
-    echo "Warning: Failed to fix permissions on snapshot at earliest level!"
-  fi
-}
-
 function RedoRemoveZFS {
-  if [[ ${REDO} == 1 ]]; then
+  if [[ ${REDO} -eq 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     if [ -d "/${BASEP}${SSDIRZFS}${D}" ]; then
       zfs destroy "${POOL}@${D}" 2>&1 >/dev/null # remove todays snapshot
-      if [[ $? == 0 ]]; then
+      if [[ $? -eq 0 ]]; then
         echo "Successfully removed todays snapshot."
       else
         echo "Failed to remove todays snapshot. Cannot continue."
@@ -160,12 +149,12 @@ function RedoRemoveZFS {
 }
 
 function RedoRemoveBTRFS {
-  if [[ ${REDO} == 1 ]]; then
+  if [[ ${REDO} -eq 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
     if [ -d "${BASEP}${SSDIR}${D}" ]; then
-      if [[ ${CR} == 0 ]]; then
+      if [[ ${CR} -eq 0 ]]; then
         btrfs subvolume delete "${BASEP}${SSDIR}${D}" 2>&1 >/dev/null # remove todays snapshot
-        if [[ $? == 0 ]]; then
+        if [[ $? -eq 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
           echo "Failed to remove todays snapshot. Cannot continue."
@@ -173,7 +162,7 @@ function RedoRemoveBTRFS {
         fi
       else
         btrfs subvolume delete -c "${BASEP}${SSDIR}${D}" 2>&1 >/dev/null # remove todays snapshot
-        if [[ $? == 0 ]]; then
+        if [[ $? -eq 0 ]]; then
           echo "Successfully removed todays snapshot."
         else
           echo "Failed to remove todays snapshot. Cannot continue."

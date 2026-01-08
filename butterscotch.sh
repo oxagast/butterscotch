@@ -302,7 +302,7 @@ if [[ ${PTNSTR} == "" ]]; then
   echo "Use -h for help."
   exit 1
 fi
-if [[ ${LIST} == 1 ]]; then
+if [[ ${LIST} -eq 1 ]]; then
   ListSnaps
   exit 0
 fi
@@ -310,17 +310,17 @@ fi
 # temporarily
 IFS=':'
 read -a PTN <<<"${PTNSTR}"
-if [[ ${LEAVEN} < 1 ]] && [[ ${PURGE} == 0 ]]; then
+if [[ ${LEAVEN} -lt 1 ]] && [[ ${PURGE} -eq 0 ]]; then
   echo "You should leave at least one (1) backup snapshot!"
   echo "Use -h for help."
   exit 1
 fi
 IFS=' '
 for BASEP in "${PTN[@]}"; do
-  if [[ ${QUICK} == 1 ]]; then
+  if [[ ${QUICK} -eq 1 ]]; then
     D="snap-quick"
   fi
-  if [[ ${PURGE} == 1 ]]; then
+  if [[ ${PURGE} -eq 1 ]]; then
     echo "Purging all snapshots found in partition: ${BASEP}"
     read -p "Are you sure? (y/n): " -n 1 -r REPLY
     echo
@@ -340,7 +340,7 @@ for BASEP in "${PTN[@]}"; do
       OldRemoveBTRFS
     fi
   fi
-  if [[ ${PURGE} != 1 ]]; then
+  if [[ ${PURGE} -ne 1 ]]; then
     # removes any snapshots older than x days while leaving at least y snapshots
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRZFS}
@@ -360,9 +360,10 @@ for BASEP in "${PTN[@]}"; do
   fi
   # unless the snapshot already exists
 done
-if [[ $TAKEN -ge 1 ]]; the  echo "Finished taking ${TAKEN} snapshot(s)!"
+if [[ $TAKEN -ge 1 ]]; then
+  echo "Finished taking ${TAKEN} snapshot(s)!"
 else
-  if [[ ${PURGE} != 1 ]]; then
+  if [[ ${PURGE} -ne 1 ]]; then
     echo "Error: Could not find any filesystems to snapshot..."
     exit 1
   fi

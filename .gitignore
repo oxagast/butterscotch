@@ -1,3 +1,7 @@
 *.tgz
+*.tar.gz
 *.deb
 *.rpm
+*.swp
+*.bak
+*.bak*

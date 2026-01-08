@@ -63,7 +63,7 @@ function CreateDir {
   fi
 }
 
-function OldRemoveZFS {
+function RemoveZFS {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@{} 2>&1 >/dev/null
@@ -74,7 +74,7 @@ function OldRemoveZFS {
   fi
 }
 
-function OldRemoveBTRFS {
+function RemoveBTRFS {
   if [[ ${CR} == 0 ]]; then
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
   else
@@ -111,7 +111,7 @@ function TakeSnapBTRFS {
       echo "Error: Snapshot failed on partition: ${BASEP}!"
     fi
     # fix permissions on it
-    FixPerms
+    #FixPerms
     if [ $RO == 1 ]; then
       # set the snapshot read-only
       SetRO
@@ -331,20 +331,20 @@ for BASEP in "${PTN[@]}"; do
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRZFS}
       LEAVEN=0
-      OldRemoveZFS
+      RemoveZFS
     fi
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRBTR}
       LEAVEN=0
       CreateDir
-      OldRemoveBTRFS
+      RemoveBTRFS
     fi
   fi
   if [[ ${PURGE} -ne 1 ]]; then
     # removes any snapshots older than x days while leaving at least y snapshots
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRZFS}
-      OldRemoveZFS
+      RemoveZFS
       RedoRemoveZFS
       TakeSnapZFS
       ((TAKEN++))
@@ -352,7 +352,7 @@ for BASEP in "${PTN[@]}"; do
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRBTR}
       CreateDir
-      OldRemoveBTRFS
+      RemoveBTRFS
       RedoRemoveBTRFS
       TakeSnapBTRFS # loop back around for next partition
       ((TAKEN++))

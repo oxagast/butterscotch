@@ -1,6 +1,6 @@
 
 Name:           butterscotch
-Version:        1.3
+Version:        1.4
 Release:        1%{?dist}
 Summary:        This software helps you create snapshots on a system with BTRFS filesystems.
 
@@ -42,6 +42,8 @@ chmod 755 /etc/cron.daily/butterscotch
 rm -rf %{buildroot}
 
 %changelog
+* Wed Jan 07 2026 Marshall Whittaker <marshall@oxasploits.com>
+- Added a function to list snapshots. Bux fixes.
 * Tues Jan 06 2026 Marshall Whittaker <marshall@oxasploits.com>
 - Added check to make sure we actually snapped. Fixed bug.
 * Tue Dec 30 2025 Marshall Whittaker <marshall@oxasploits.com>

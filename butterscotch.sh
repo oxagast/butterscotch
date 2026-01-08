@@ -51,7 +51,7 @@ function ListSnaps {
     exit 1
   fi
   echo "Found ${TCOUNT} snapshots."
-  printf '%s\n' "${SHOTS[@]}"
+  printf "%s\n" ${SHOTS[@]}
   exit 0
 }
 

@@ -1,6 +1,6 @@
 
 Name:           butterscotch
-Version:        1.4
+Version:        1.5
 Release:        1%{?dist}
 Summary:        This software helps you create snapshots on a system with BTRFS filesystems.
 
@@ -13,7 +13,7 @@ Enhances:       btrfs-progs
 BuildArch:      noarch
 
 %description
-This software helps users create rolling BTRFS snapshots on their systems.
+This software helps users create rolling filesystem snapshots on their systems.
 
 %global debug_package %{nil}
 

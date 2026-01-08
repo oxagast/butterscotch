@@ -2,7 +2,7 @@ ButterScotch backup utilities
 Tools that ease the use of BTRFS and ZFS snapshot driven backups
 
 Usage
-The below flags tell btrfs how to generate and manage your snapshots.
+The below flags tell btrfs and zfs how to generate and manage your snapshots.
 
 Usage:
    ./butterscotch -p /:/home -c -w

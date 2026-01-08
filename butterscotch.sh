@@ -7,7 +7,7 @@ REDO=0
 CR=0
 RO=0
 TAKEN=0
-VER="v1.4"
+VER="v1.5"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 SSDIRZFS="/.zfs/snapshot/"
 SSDIRBTR="/.snapshots/"
@@ -29,6 +29,8 @@ function help {
   echo " -q       Take a quicksnap. This assumes -a if not specified.            Default:           off"
   echo " -U       Unsupported OS override. Use at your own risk!                 Default:           off"
   echo " -l       List snapshots found in specified partitions. Pair with -p.    Default:          none"
+  echo " -P       Purge all snapshots found in specified partitions. Asks for    Default:          none"
+  echo "          confirmation before deletion.  Pair with -p or -a.                                   "
   echo " -V       Display version information.                                   Default:          none"
   echo
 }
@@ -183,7 +185,6 @@ function RedoRemoveBTRFS {
     fi
   fi
 }
-
 function banner {
   echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
   echo "Designed by oxagast / Marshall Whittaker."
@@ -204,14 +205,15 @@ if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts ":hVlap:d:rUwcqL:" OPTS; do
+while getopts "hVlap:d:rPUwcqL:" OPTS; do
   case ${OPTS} in
   h) # display Help
     help
     exit 1
     ;;
-  n) # how many to leave total
-    LEAVEN=${OPTARG} ;;
+  d) # how many to leave total
+    LEAVEN=${OPTARG}
+    ;;
   a) # all partitions
     PTNSTR=$(mount | grep "btrfs\|zfs" | grep -v crash | grep -v audit | grep -v tmp | grep -v mail | cut -d ' ' -f 3 | tr '\n' ':')
     ASET=1
@@ -242,6 +244,9 @@ while getopts ":hVlap:d:rUwcqL:" OPTS; do
     ;;
   w) # read-only fs
     RO=1
+    ;;
+  P) # purge all snapshots
+    PURGE=1
     ;;
   q) # quicsnap
     if [[ $(uname -s) == "Linux" ]]; then
@@ -276,7 +281,7 @@ if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   exit 1
 fi
 if [[ ${PTNSTR} != *"/"* ]]; then
-  echo "You need to specify a mount point (directory) for this to work!"
+  echo "You need to specify a mount point (directory) for this to work!  Hint: -p"
   echo "Use -h for help."
   exit 1
 fi
@@ -297,7 +302,7 @@ if [[ ${PTNSTR} == "" ]]; then
   echo "Use -h for help."
   exit 1
 fi
-if [[ $LIST == 1 ]]; then
+if [[ ${LIST} == 1 ]]; then
   ListSnaps
   exit 0
 fi
@@ -305,7 +310,7 @@ fi
 # temporarily
 IFS=':'
 read -a PTN <<<"${PTNSTR}"
-if [[ ${LEAVEN} < 1 ]]; then
+if [[ ${LEAVEN} < 1 ]] && [[ ${PURGE} == 0 ]]; then
   echo "You should leave at least one (1) backup snapshot!"
   echo "Use -h for help."
   exit 1
@@ -315,28 +320,51 @@ for BASEP in "${PTN[@]}"; do
   if [[ ${QUICK} == 1 ]]; then
     D="snap-quick"
   fi
-  # removes any snapshots older than x days while leaving at least y snapshots
-  if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
-    SSDIR=${SSDIRZFS}
-    OldRemoveZFS
-    RedoRemoveZFS
-    TakeSnapZFS
-    ((TAKEN++))
+  if [[ ${PURGE} == 1 ]]; then
+    echo "Purging all snapshots found in partition: ${BASEP}"
+    read -p "Are you sure? (y/n): " -n 1 -r REPLY
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      echo "Not confirmed, exiting."
+      exit 1
+    fi
+    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
+      SSDIR=${SSDIRZFS}
+      LEAVEN=0
+      OldRemoveZFS
+    fi
+    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
+      SSDIR=${SSDIRBTR}
+      LEAVEN=0
+      CreateDir
+      OldRemoveBTRFS
+    fi
   fi
-  if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
-    SSDIR=${SSDIRBTR}
-    CreateDir
-    OldRemoveBTRFS
-    RedoRemoveBTRFS
-    TakeSnapBTRFS # loop back around for next partition
-    ((TAKEN++))
+  if [[ ${PURGE} != 1 ]]; then
+    # removes any snapshots older than x days while leaving at least y snapshots
+    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
+      SSDIR=${SSDIRZFS}
+      OldRemoveZFS
+      RedoRemoveZFS
+      TakeSnapZFS
+      ((TAKEN++))
+    fi
+    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
+      SSDIR=${SSDIRBTR}
+      CreateDir
+      OldRemoveBTRFS
+      RedoRemoveBTRFS
+      TakeSnapBTRFS # loop back around for next partition
+      ((TAKEN++))
+    fi
   fi
   # unless the snapshot already exists
 done
-if [[ $TAKEN -ge 1 ]]; then
-  echo "Finished taking ${TAKEN} snapshots!"
+if [[ $TAKEN -ge 1 ]]; the  echo "Finished taking ${TAKEN} snapshot(s)!"
 else
-  echo "Error: Could not find any filesystems to snapshot..."
-  exit 1
+  if [[ ${PURGE} != 1 ]]; then
+    echo "Error: Could not find any filesystems to snapshot..."
+    exit 1
+  fi
 fi
 # now we're done

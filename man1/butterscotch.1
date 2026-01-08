@@ -4,20 +4,23 @@
 .Sh NAME                 \" Section Header - required - don't modify
 .Nm ButterScotch
 .\" Use .Nm macro to designate other names for the documented program.
-.Nd A backup utility that utilizes btrfs snapshots
+.Nd A backup utility that utilizes filesystem based snapshots.
 .Sh SYNOPSIS             \" Section Header - required - don't modify
 .Nn btrfs-snaptime
 .Op Fl hadrcwL              \" [-abcd]
 .Op Fl p /:/home         \" [-a path]
 .Sh DESCRIPTION          \" Section Header - required - don't modify
 .Nm
-is a filesystem (zfs or btrfs) helper utility utility designed to be used either 
+is a filesystem (zfs or btrfs) helper utility designed to be used either 
 as a standlone or as a timed cronjob that generates filesystem snapshots.
 It is designed to make the snapshots read-only to prevent accidental
 deletion or modification.  The utility can also leave a 
 .Ar trail
 of snapshots, a couple days, weeks, or months behind the current snapshot,
-and you can specify how many snapshots to leave in trail.
+and you can specify how many snapshots to leave in trail.  It is advised to
+this program from a cronjob.  The distributed packges install a daily cronjob
+by default.  You should be aware that this code will significatly increase disk
+useage over time, depending on how much data changes between snapshots.
 A list of flags and their descriptions:
 .Bl -tag -width -indent  \" Differs from above in tag removed
 .It Fl h
@@ -35,16 +38,24 @@ Default: off.
 Immediately commit deletions. Default: off.
 .It Fl q
 Make a quicksnap.
+.It Fl U
+This overrides the unsupported operating system check. Use at your own risk!
 .It Fl w
 Mark read-only. Default: off.
 .It Fl L
 Snapshot locations (relative to btrfs mountpoint). Default:  /.snapshots/
+.It Fl P
+Purge snapshots specififed by -p or -a. Asks for confirmation before deleting anything.
+.It Fl V
+Version information.
+.It Fl l
+List all snapshots for all partitions specified via -p or -a.  Default is to list all found snapshots.
 .El                      \" Ends the list
 .Pp
 .Sh FILES \" File used or created by the topic of the man page
 .Bl -tag -width -indent
 .It Pa /usr/bin/butterscotch
-btrfs-snaptime The script. Should be set executable.
+butterscotch The script. Should be set executable.
 .Sh SEE ALSO
 .\" List links in ascending order by section, alphabetically within a section.
 .\" Please do not reference files that do not exist without filing a bug report

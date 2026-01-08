@@ -66,9 +66,9 @@ function CreateDir {
 function OldRemoveZFS {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{} 2>&1 >/dev/null
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@{} 2>&1 >/dev/null
   elif [[ $(uname -s) == "Linux" ]]; then
-    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@"/${BASEP}${SSDIRZFS}"{} 2>&1 >/dev/null
+    find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@{} 2>&1 >/dev/null
   else
     echo "Unsupported OS for ZFS snapshot removal!"
   fi

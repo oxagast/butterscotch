@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # oxagast / Marshall Whittaker
 # oxasploits, llc. 2026
 #

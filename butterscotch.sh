@@ -15,8 +15,10 @@ SSDIRBTR="/.snapshots/"
 
 function help {
   echo "Usage:"
-  echo "   $0 -p /:/home -c -w"
-  echo "   $0 -a -r -d 5"
+  echo "   $0 -p /:/home -c -w      # snapshots /home and /, commits deletions, makes read-only"
+  echo "   $0 -a -r -d 5            # snapshot all btrfs partitions, removing any older than 5 snaps"
+  echo "   $0 -P -p /var:/home -y   # purges snapshots in /var and /home without prompt"
+  echo "   $0 -l -p /:/data         # list snapshots found in / and /data"
   echo
   echo " -h       This help message."
   echo " -a       Snapshot all btrfs partitions.                                 Default:           off"
@@ -230,7 +232,8 @@ while getopts "hVlap:d:rPUywcqL:" OPTS; do
     ;;
   r) # if we need to remove todays snapshot first (using this
     # too much is hard on your disk!)
-    REDO=1 ;;
+    REDO=1
+    ;;
   p) # the partitions string
     PTNSTR=${OPTARG}
     PSET=1

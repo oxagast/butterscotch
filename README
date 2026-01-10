@@ -20,6 +20,7 @@ Usage:
  -q       Take a quicksnap. This assumes -a if not specified.            Default:           off
  -U       Unsupported OS override. Use at your own risk!                 Default:           off
  -l       List snapshots found in specified partitions. Pair with -p.    Default:          none
+ -y       Assume yes to all prompts.                                     Default:           off
  -V       Display version information.                                   Default:          none
 
 

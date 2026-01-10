@@ -7,7 +7,7 @@ REDO=0
 CR=0
 RO=0
 TAKEN=0
-VER="v1.5"
+VER="v1.5.1"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 SSDIRZFS="/.zfs/snapshot/"
 SSDIRBTR="/.snapshots/"
@@ -45,8 +45,8 @@ function ListSnaps {
     P="${BASEP}${SSDIR}"
     P=$(echo "${P}" | tr -s '/')
     # put the snapshot list into an array to list later
-    readarray -O "${#SHOTS[@]}" -t SHOTS < <(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick)
-    MCOUNT=$(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick | wc -l)
+    readarray -O "${#SHOTS[@]}" -t SHOTS < <(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap-)
+    MCOUNT=$(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | wc -l)
     # the total snapshot count
     TCOUNT=$((MCOUNT + TCOUNT))
   done

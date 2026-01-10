@@ -324,21 +324,21 @@ for BASEP in "${PTN[@]}"; do
     read -p "Are you sure? (y/n): " -n 1 -r REPLY
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Not confirmed, exiting."
-      exit 1
-    fi
-    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
-      SSDIR=${SSDIRZFS}
-      # set LEAVEN 0 to remove all snapshots
-      LEAVEN=0
-      RemoveZFS
-    fi
-    if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
-      SSDIR=${SSDIRBTR}
-      LEAVEN=0
-      # well still need the directory to be there
-      CreateDir
-      RemoveBTRFS
+      echo "Not confirmed, not removing."
+    else
+      if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
+        SSDIR=${SSDIRZFS}
+        # set LEAVEN 0 to remove all snapshots
+        LEAVEN=0
+        RemoveZFS
+      fi
+      if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
+        SSDIR=${SSDIRBTR}
+        LEAVEN=0
+        # well still need the directory to be there
+        CreateDir
+        RemoveBTRFS
+      fi
     fi
   fi
   if [[ ${PURGE} -ne 1 ]]; then

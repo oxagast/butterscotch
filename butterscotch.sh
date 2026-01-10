@@ -44,8 +44,10 @@ function ListSnaps {
   for BASEP in "${PTN[@]}"; do
     P="${BASEP}${SSDIR}"
     P=$(echo "${P}" | tr -s '/')
+    # put the snapshot list into an array to list later
     readarray -O "${#SHOTS[@]}" -t SHOTS < <(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick)
     MCOUNT=$(find "${P}" -maxdepth 1 -type d 2>/dev/null | grep snap- | grep -v quick | wc -l)
+    # the total snapshot count
     TCOUNT=$((MCOUNT + TCOUNT))
   done
   if [[ $TCOUNT -eq 0 ]]; then
@@ -66,6 +68,7 @@ function CreateDir {
 function RemoveZFS {
   if [[ $(uname -s) == "FreeBSD" ]]; then
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
+    # find the snapshots from -p and pipe them to xargs to be fed into zfs destroy
     find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | ghead -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@{} 2>&1 >/dev/null
   elif [[ $(uname -s) == "Linux" ]]; then
     find "/${BASEP}${SSDIRZFS}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} zfs destroy "${POOL}"@{} 2>&1 >/dev/null
@@ -76,6 +79,7 @@ function RemoveZFS {
 
 function RemoveBTRFS {
   if [[ ${CR} -eq 0 ]]; then
+    # find snaps and pie them to xargs to be fed into btrfs subvolume delete
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
   else
     find "${BASEP}/${SSDIR}" -maxdepth 0 -exec ls -1ctr {} \; | head -n -${LEAVEN} | grep -v quick | xargs -I {} btrfs subvolume delete -c ${BASEP}/${SSDIR}/{} 2>&1 >/dev/null
@@ -133,6 +137,7 @@ function SetRO {
 function RedoRemoveZFS {
   if [[ ${REDO} -eq 1 ]]; then
     echo "Checking if there is a snapshot from today that needs removing before we can continue..."
+    # find the zfs pool name
     POOL=$(df /${BASEP} | cut -d ' ' -f 1 | grep -v Filesystem)
     if [ -d "/${BASEP}${SSDIRZFS}${D}" ]; then
       zfs destroy "${POOL}@${D}" 2>&1 >/dev/null # remove todays snapshot
@@ -174,6 +179,7 @@ function RedoRemoveBTRFS {
     fi
   fi
 }
+
 function banner {
   echo "ButterScotch ${VER}, (c) 2025 oxasploits, llc."
   echo "Designed by oxagast / Marshall Whittaker."
@@ -204,6 +210,8 @@ while getopts "hVlap:d:rPUwcqL:" OPTS; do
     LEAVEN=${OPTARG}
     ;;
   a) # all partitions
+    # grep mount for btrfs or zfs and filter out unwanted
+    # mounts then retrieve mount points to make -p compatible
     PTNSTR=$(mount | grep "btrfs\|zfs" | grep -v crash | grep -v audit | grep -v tmp | grep -v mail | cut -d ' ' -f 3 | tr '\n' ':')
     ASET=1
     ;;
@@ -215,7 +223,8 @@ while getopts "hVlap:d:rPUwcqL:" OPTS; do
     SSDIR=${OPTARG}
     SSDIRBTR=${OPTARG}
     ;;
-  r) # if we need to remove todays snapshot first (using this too much is hard on your disk!)
+  r) # if we need to remove todays snapshot first (using this
+    # too much is hard on your disk!)
     REDO=1 ;;
   p) # the partitions string
     PTNSTR=${OPTARG}
@@ -269,6 +278,7 @@ if [[ ${SSDIR:0:1} != "/" || ${SSDIR: -1} != "/" ]]; then
   echo "The -L parameter must begin and end with a / character!"
   exit 1
 fi
+# make sure a mount point is specified by ensuring there is at least one '/' in the string
 if [[ ${PTNSTR} != *"/"* ]]; then
   echo "You need to specify a mount point (directory) for this to work!  Hint: -p"
   echo "Use -h for help."
@@ -319,12 +329,14 @@ for BASEP in "${PTN[@]}"; do
     fi
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRZFS}
+      # set LEAVEN 0 to remove all snapshots
       LEAVEN=0
       RemoveZFS
     fi
     if [[ $(df -T | awk '{print $2}' | grep -v Type | grep btrfs | wc -l) -ge 1 ]]; then
       SSDIR=${SSDIRBTR}
       LEAVEN=0
+      # well still need the directory to be there
       CreateDir
       RemoveBTRFS
     fi

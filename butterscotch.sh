@@ -7,7 +7,8 @@ REDO=0
 CR=0
 RO=0
 TAKEN=0
-VER="v1.5.1"
+YES=0
+VER="v1.5.2"
 SSDIR="/.snapshots/" # this is the dir under the btrfs mountpoint we should store snapshots in
 SSDIRZFS="/.zfs/snapshot/"
 SSDIRBTR="/.snapshots/"
@@ -31,6 +32,7 @@ function help {
   echo " -l       List snapshots found in specified partitions. Pair with -p.    Default:          none"
   echo " -P       Purge all snapshots found in specified partitions. Asks for    Default:          none"
   echo "          confirmation before deletion.  Pair with -p or -a.                                   "
+  echo " -y       Assume yes to all prompts.                                     Default:           off"
   echo " -V       Display version information.                                   Default:          none"
   echo
 }
@@ -200,7 +202,7 @@ if [[ $(which btrfs) == "" && $(which zfs) == "" ]]; then
 fi
 # generates date
 D=$(date +snap-%d-%m-%Y)
-while getopts "hVlap:d:rPUwcqL:" OPTS; do
+while getopts "hVlap:d:rPUywcqL:" OPTS; do
   case ${OPTS} in
   h) # display Help
     help
@@ -208,6 +210,9 @@ while getopts "hVlap:d:rPUwcqL:" OPTS; do
     ;;
   d) # how many to leave total
     LEAVEN=${OPTARG}
+    ;;
+  y) # assume yes to prompts
+    YES=1
     ;;
   a) # all partitions
     # grep mount for btrfs or zfs and filter out unwanted
@@ -321,10 +326,14 @@ for BASEP in "${PTN[@]}"; do
   fi
   if [[ ${PURGE} -eq 1 ]]; then
     echo "Purging all snapshots found in partition: ${BASEP}"
-    read -p "Are you sure? (y/n): " -n 1 -r REPLY
-    echo
+    if [[ ${YES} -eq 1 ]]; then
+      REPLY="y"
+    else
+      read -p "Are you sure? (y/n): " -n 1 -r REPLY
+      echo
+    fi
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      echo "Not confirmed, not removing."
+      echo "Not confirmed, not removing..."
     else
       if [[ $(df -T | awk '{print $2}' | grep -v Type | grep zfs | wc -l) -ge 1 ]]; then
         SSDIR=${SSDIRZFS}
